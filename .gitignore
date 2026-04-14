@@ -1,3 +1,16 @@
+.vs
 .vs/
 
+#environment variables
 .env
+.env/
+
+#virtual environment/OAuth credentials
+.venv
+.venv/
+credentials.json
+token.pickle
+
+#secret files
+.secrets
+.secrets/
