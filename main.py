@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from agent import run_agent 
 
-#-----Main Code-----
 app = FastAPI()
 
 class Request(BaseModel):
@@ -9,4 +9,14 @@ class Request(BaseModel):
 
 @app.post("/chat")
 def chat(req: Request):
-    return {"response": f"You said: {req.message}"}
+    result = run_agent(req.message)
+
+    # If Gemini wants to call a function
+    if result["action"] == "create_calendar_event":
+        return {
+            "response": "I can schedule that for you.",
+            "data": result["args"]
+        }
+
+    # Otherwise just return text
+    return {"response": result["text"]}
