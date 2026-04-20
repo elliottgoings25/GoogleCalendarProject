@@ -14,3 +14,6 @@ token.pickle
 #secret files
 .secrets
 .secrets/
+
+#else
+service-account.json
