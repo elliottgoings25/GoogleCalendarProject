@@ -1,7 +1,7 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QVBoxLayout, QPushButton, QLabel, QLineEdit
+from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QVBoxLayout, QPushButton, QLabel, QLineEdit, QDateTimeEdit
+from PyQt5.QtCore import Qt, QDateTime
 from PyQt5.QtGui import QFont, QColor, QIcon
-from PyQt5.QtCore import Qt
 from services.calendar import post_event
 
 class CalendarUI(QWidget):
@@ -45,6 +45,20 @@ class CalendarUI(QWidget):
         self.event_prompt.setMinimumHeight(40)  # Height
         layout.addWidget(self.event_prompt)
 
+
+        # --Hidden Widgets--
+        from PyQt5.QtWidgets import QDateTimeEdit
+        from PyQt5.QtCore import QDateTime
+        
+        self.event_name = QLineEdit()
+        self.start_time = QDateTimeEdit()
+        self.start_time.setDateTime(QDateTime.currentDateTime())
+        self.end_time = QDateTimeEdit()
+        self.end_time.setDateTime(QDateTime.currentDateTime().addSecs(3600))
+        self.description = QLineEdit()
+        # --Hidden Widgets--
+
+
         # Send button
         send_btn = QPushButton('Create Event')
         send_btn.setFont(QFont('Bleeding Cowboys', 12, QFont.Bold))
@@ -65,10 +79,50 @@ class CalendarUI(QWidget):
         """)
         send_btn.setMinimumHeight(45)
         send_btn.setCursor(Qt.PointingHandCursor)  # Hand cursor on hover
-        send_btn.clicked.connect(self.show_preview)
+        send_btn.clicked.connect(self.prompt_and_responses)
         layout.addWidget(send_btn)
         
         self.setLayout(layout)
+
+    def prompt_and_responses(self):
+        """
+        Test function that extracts event details (simulating Claude API)
+        """
+        text = self.event_prompt.text()
+        
+        if not text:
+            QMessageBox.warning(self, 'Error', 'Please enter event details')
+            return
+        
+        def extract_field(field_name):
+            """Simulate extracting a field from the text"""
+            # For testing, just return hardcoded values
+            test_data = {
+                "title": "test",
+                "description": "testing",
+                "start_datetime": "2026-04-22T09:00:00",
+                "end_datetime": "2026-04-22T10:00:00"
+            }
+            return test_data.get(field_name, "")
+        
+        # Get each field separately
+        title = extract_field("title")
+        description = extract_field("description")
+        start = extract_field("start_datetime")
+        end = extract_field("end_datetime")
+        
+        # Populate the UI fields
+        self.event_name.setText(title)
+        self.description.setText(description)
+        
+        from PyQt5.QtCore import QDateTime
+        start_dt = QDateTime.fromString(start, 'yyyy-MM-ddThh:mm:ss')
+        end_dt = QDateTime.fromString(end, 'yyyy-MM-ddThh:mm:ss')
+        self.start_time.setDateTime(start_dt)
+        self.end_time.setDateTime(end_dt)
+        
+        # Show preview
+        self.show_preview()
 
     def show_preview(self):
         """Show preview dialog before posting"""
@@ -107,7 +161,7 @@ class CalendarUI(QWidget):
         start = self.start_time.dateTime().toString('yyyy-MM-ddThh:mm:ss')
         end = self.end_time.dateTime().toString('yyyy-MM-ddThh:mm:ss')
         
-        post_event(  # 👈 Pass description here
+        post_event(
             summary=self.event_name.text(),
             start_datetime=start,
             end_datetime=end,
