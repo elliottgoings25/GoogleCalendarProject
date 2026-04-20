@@ -17,3 +17,19 @@ def get_calendar_service():
         with open('token.pickle', 'wb') as f:
             pickle.dump(creds, f)
     return build('calendar', 'v3', credentials=creds)
+
+def post_event(summary, start_datetime, end_datetime, description='', timezone='America/Chicago'):
+    """
+    Post an event to Google Calendar
+    """
+    service = get_calendar_service()
+    
+    event = {
+        'summary': summary,
+        'description': description,  # 👈 Add this
+        'start': {'dateTime': start_datetime, 'timeZone': timezone},
+        'end': {'dateTime': end_datetime, 'timeZone': timezone},
+    }
+    
+    created = service.events().insert(calendarId='primary', body=event).execute()
+    return created
