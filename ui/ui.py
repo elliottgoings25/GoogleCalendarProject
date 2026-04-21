@@ -1,26 +1,32 @@
 import sys
 import os
 
+# Ensure parent directory is in path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# Action imports
+from services.parser import parse_event
+from services.calendar import post_event as calendar_post_event
+
+# UI imports
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QPushButton,
     QLabel, QLineEdit, QMessageBox, QDateTimeEdit
 )
 from PyQt5.QtCore import Qt, QDateTime
 from PyQt5.QtGui import QFont
-from services.parser import parse_event
-from services.calendar import post_event
 
 #-------------------------
-# MAIN UI CODE
+# UI CODE
 #-------------------------
 class CalendarUI(QWidget):
     def __init__(self):
         super().__init__()
         self.init_ui()
     
+    #-------------------------
     # Global stylesheet
+    #-------------------------
     def apply_styles(self):
         self.setStyleSheet("""
             QWidget {
@@ -63,7 +69,9 @@ class CalendarUI(QWidget):
                 background-color: #3d8b40;
             }
         """)
-
+    #-------------------------
+    # UI SETUP
+    #-------------------------
     def init_ui(self):
         self.apply_styles()
         self.setWindowTitle('AI Calendar Event Creator')
@@ -71,27 +79,21 @@ class CalendarUI(QWidget):
 
         layout = QVBoxLayout()
 
-        # Title
+        # -----Title-----
         title = QLabel('What are you planning?')
         title.setObjectName("title")
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
 
-        # Input
+        # -----Input textbox-----
         self.event_prompt = QLineEdit()
-        self.event_prompt.setPlaceholderText('Describe your event...')
+        self.event_prompt.setPlaceholderText('What are you getting up to?')
         layout.addWidget(self.event_prompt)
 
-        # Hidden fields (internal state)
-        self.event_name = QLineEdit()
-        self.description = QLineEdit()
-        self.start_time = QDateTimeEdit()
-        self.end_time = QDateTimeEdit()
-
-        # Button
-        btn = QPushButton('Create Event')
+        # -----Button-----
+        btn = QPushButton('Schedule Event')
         btn.setCursor(Qt.PointingHandCursor)
-        btn.clicked.connect(self.handle_input)
+        btn.clicked.connect(self.handle_input) # Connect button to handler
         layout.addWidget(btn)
 
         self.setLayout(layout)
@@ -102,27 +104,21 @@ class CalendarUI(QWidget):
     def handle_input(self):
         text = self.event_prompt.text()
 
+        # -----Ensure input is present-----
         if not text:
             QMessageBox.warning(self, 'Error', 'Enter event details')
             return
 
-        # 🔥 Call parser (NOT UI responsibility)
+        #-------------------------
+        # ACTION: Parse event
+        #-------------------------
         event = parse_event(text)
 
-        # Store values
-        self.event_name.setText(event.title)
-        self.description.setText(event.description)
-
-        start_dt = QDateTime.fromString(event.start, 'yyyy-MM-ddThh:mm:ss')
-        end_dt = QDateTime.fromString(event.end, 'yyyy-MM-ddThh:mm:ss')
-
-        self.start_time.setDateTime(start_dt)
-        self.end_time.setDateTime(end_dt)
-
+        # -----Go to preview-----
         self.show_preview(event)
 
     # -------------------------
-    # PREVIEW UI
+    # PREVIEW OF EVENT BEFORE PUSH
     # -------------------------
     def show_preview(self, event):
         msg = QMessageBox(self)
@@ -137,7 +133,7 @@ class CalendarUI(QWidget):
 
         msg.setText(preview_text)
 
-        # Messagebox styling
+        # -----Messagebox styling-----
         msg.setStyleSheet("""
             QMessageBox {
                 background-color: #303234;
@@ -149,9 +145,9 @@ class CalendarUI(QWidget):
         """)
 
         yes_btn = msg.addButton('Yes', QMessageBox.YesRole)
-        no_btn = msg.addButton('No', QMessageBox.NoRole)
+        no_btn = msg.addButton('No', QMessageBox.NoRole) # Closes the preview with no action
 
-        # Button styling
+        # -----Button styling-----
         yes_btn.setStyleSheet("""
             QPushButton {
                 background-color: #4CAF50;
@@ -188,20 +184,23 @@ class CalendarUI(QWidget):
 
         msg.exec_()
 
+        # -----Links button click to push action-----
         if msg.clickedButton() == yes_btn:
             self.post_event(event)
 
     # -------------------------
-    # ACTION: send info to backend
+    # ACTION: send event to push code
     # -------------------------
     def post_event(self, event):
-        post_event(
+        # -----Call calendar service-----
+        calendar_post_event(
             summary=event.title,
             start_datetime=event.start,
             end_datetime=event.end,
             description=event.description
         )
 
+        # -----Confirmation message-----
         QMessageBox.information(self, 'Success', 'Event posted!')
         self.event_prompt.clear()
 

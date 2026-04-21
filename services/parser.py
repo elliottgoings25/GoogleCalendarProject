@@ -1,14 +1,10 @@
 from models.event import Event
 
-# will eventually be where the ai code is added, currently has test data
-
+#-------------------------
+# ACTION: AI event parsing
+#-------------------------
 def parse_event(text: str) -> Event:
-    """
-    Convert user input into structured event data.
-    Replace this later with AI parsing.
-    """
-
-    # TEMP mock logic
+    # Temp hardcoded event
     return Event(
         title="test",
         description="testing",

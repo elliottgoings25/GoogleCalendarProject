@@ -1,4 +1,6 @@
-# Set up an event model for all other codes to use
+#--------------------------
+# EVENT MODEL
+#--------------------------
 class Event:
     def __init__(self, title, start, end, description=""):
         self.title = title

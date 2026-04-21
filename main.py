@@ -1,18 +1,22 @@
 import sys
 from PyQt5.QtWidgets import QApplication
 from ui.ui import CalendarUI
+"""
 from fastapi import FastAPI
 from pydantic import BaseModel
 from agent import run_agent 
+"""
 
 
-#-----Main Code-----
+#--------------------------
+# MAIN ENTRY POINT
+#--------------------------
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = CalendarUI()
     window.show()
     sys.exit(app.exec_())
-    
+"""    
 app = FastAPI()
 
 class Request(BaseModel):
@@ -31,3 +35,4 @@ def chat(req: Request):
 
     # Otherwise just return text
     return {"response": result["text"]}
+"""
