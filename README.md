@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains a web app with the capabilities of using ai to create and post events on a personal google calendar
+This repository contains a desktop app with the capabilities of using ai to create and post events on a personal google calendar
 
 ## Setup
 
