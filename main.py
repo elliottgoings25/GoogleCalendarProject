@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication
-from ui.calendar_ui import CalendarUI
+from ui.ui import CalendarUI
 from fastapi import FastAPI
 from pydantic import BaseModel
 from agent import run_agent 

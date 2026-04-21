@@ -25,8 +25,4 @@ We will then need to run several commands to get setup
 
     This will direct you into a browser on port 8080, log in using the group email to gain your token file
 
-4. `deactivate`
-
-    This will leave the virtual environment
-
 
