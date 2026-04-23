@@ -13,7 +13,7 @@ Next will be to generate a OAuth client, under the credentials tab again, click 
 
 We will then need to run several commands to get setup
 
-1. `python -m pip install google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client`
+1. `py -m venv .venv`
 
     This should install a .venv\ file
 
@@ -21,8 +21,10 @@ We will then need to run several commands to get setup
 
     This will direct the terminal into the virtual environment
 
-3. `py generate_token.py`
+3. `python -m pip install google-auth-oauthlib google-auth google-api-python-client`
 
-    This will direct you into a browser on port 8080, log in using the group email to gain your token file
+    This will download the files needed for setup of tokens
+
+From there, as long as you have the credentials file and previous commands ran, running the program should automatically call the token generator to establish a connection to google
 
 
