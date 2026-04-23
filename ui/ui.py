@@ -12,7 +12,8 @@ from services.calendar import post_event as calendar_post_event
 # UI imports
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QLineEdit, QMessageBox, QDateTimeEdit
+    QPushButton, QLabel, QLineEdit, QMessageBox,
+    QDateTimeEdit,  QCheckBox
 )
 from PyQt5.QtCore import Qt, QDateTime
 from PyQt5.QtGui import QFont
@@ -31,7 +32,22 @@ class CalendarUI(QWidget):
                 print("Failed to generate token")
                 sys.exit(1)
 
+        # -----Delete token flag-----
+        self.delete_token_on_exit = False
+
         self.init_ui()
+
+    #-------------------------
+    # ACTION: Delete token.pickle on exit
+    #-------------------------
+    def closeEvent(self, event):
+        if self.delete_token_on_exit and os.path.exists('token.pickle'):
+            try:
+                os.remove('token.pickle')
+                print("Token deleted on exit")
+            except Exception as e:
+                print(f"Error deleting token: {e}")
+        event.accept()
     
     #-------------------------
     # Global stylesheet
@@ -88,6 +104,11 @@ class CalendarUI(QWidget):
         self.setGeometry(100, 100, 400, 300)
 
         layout = QVBoxLayout()
+
+        # -----Login deletion checkbox-----
+        delete_checkbox = QCheckBox('Logout on exit')
+        delete_checkbox.stateChanged.connect(self.toggle_delete_on_exit)
+        layout.addWidget(delete_checkbox)
 
         # -----Title-----
         title = QLabel('What are you planning?')
@@ -228,6 +249,13 @@ class CalendarUI(QWidget):
         except subprocess.CalledProcessError as e:
             print(f"Error: {e}")
             return False
+        
+    #-------------------------
+    # Delete token handler
+    #-------------------------
+    def toggle_delete_on_exit(self, state):
+        self.delete_token_on_exit = state == 2  # 2 = checked, 0 = unchecked
+        print(f"Delete on exit: {self.delete_token_on_exit}")
 
 
 if __name__ == '__main__':
