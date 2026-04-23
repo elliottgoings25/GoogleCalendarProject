@@ -1,5 +1,6 @@
 import sys
 import os
+import subprocess
 
 # Ensure parent directory is in path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -10,8 +11,8 @@ from services.calendar import post_event as calendar_post_event
 
 # UI imports
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QPushButton,
-    QLabel, QLineEdit, QMessageBox, QDateTimeEdit
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout,
+    QPushButton, QLabel, QLineEdit, QMessageBox, QDateTimeEdit
 )
 from PyQt5.QtCore import Qt, QDateTime
 from PyQt5.QtGui import QFont
@@ -22,6 +23,14 @@ from PyQt5.QtGui import QFont
 class CalendarUI(QWidget):
     def __init__(self):
         super().__init__()
+
+        # -----Check for token.pickle-----
+        if not os.path.exists('token.pickle'):
+            success = self.ensure_token()
+            if not success:
+                print("Failed to generate token")
+                sys.exit(1)
+
         self.init_ui()
     
     #-------------------------
@@ -73,6 +82,7 @@ class CalendarUI(QWidget):
     # UI SETUP
     #-------------------------
     def init_ui(self):
+
         self.apply_styles()
         self.setWindowTitle('AI Calendar Event Creator')
         self.setGeometry(100, 100, 400, 300)
@@ -90,7 +100,7 @@ class CalendarUI(QWidget):
         self.event_prompt.setPlaceholderText('What are you getting up to?')
         layout.addWidget(self.event_prompt)
 
-        # -----Button-----
+        # -----Create Button-----
         btn = QPushButton('Schedule Event')
         btn.setCursor(Qt.PointingHandCursor)
         btn.clicked.connect(self.handle_input) # Connect button to handler
@@ -203,6 +213,21 @@ class CalendarUI(QWidget):
         # -----Confirmation message-----
         QMessageBox.information(self, 'Success', 'Event posted!')
         self.event_prompt.clear()
+
+    # -------------------------
+    # Ensure token.pickle exists by calling generate_token.py
+    # -------------------------
+    def ensure_token(self):
+        try:
+            result = subprocess.run(
+                [sys.executable, 'generate_token.py'],
+                check=True,
+                capture_output=True
+            )
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"Error: {e}")
+            return False
 
 
 if __name__ == '__main__':

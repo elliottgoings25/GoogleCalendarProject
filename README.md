@@ -21,10 +21,12 @@ We will then need to run several commands to get setup
 
     This will direct the terminal into the virtual environment
 
-3. `python -m pip install google-auth-oauthlib google-auth google-api-python-client`
+3. `python -m pip install PyQt5 pyinstaller google-auth google-auth-oauthlib google-api-python-client`
 
-    This will download the files needed for setup of tokens
+    This will download the files needed for setup of tokens and ui interface
 
 From there, as long as you have the credentials file and previous commands ran, running the program should automatically call the token generator to establish a connection to google
 
 
+also here is a .exe build command if you want it
+    `pyinstaller --onefile --windowed --icon=CPSC311.ico main.py`
