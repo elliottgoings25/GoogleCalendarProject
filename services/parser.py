@@ -1,18 +1,35 @@
 import json
-from models.event import Event
-from services.gemini import parse_event_with_gemini
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-#------------------------------
-# AI parsing of the event details
-#------------------------------
+from models.event import Event
+from llm import ask_gemini 
+
+#-----------------------------
+# Parser function that uses Groq to extract event details from text
+#-----------------------------
 def parse_event(text: str) -> Event:
-    """Parse event from text using Gemini"""
     try:
-        # Get JSON from Gemini
-        gemini_response = parse_event_with_gemini(text)
+        prompt = f"""Extract event details from this text. Return ONLY valid JSON with no markdown formatting.
+
+Text: {text}
+
+Return this exact JSON structure:
+{{
+    "title": "event title",
+    "description": "event description",
+    "start": "2026-04-20T10:00:00",
+    "end": "2026-04-20T11:00:00"
+}}
+
+If something is unspecified, kill the prompt."""
+        
+        # Call your existing Groq function
+        groq_response = ask_gemini(prompt)
         
         # Clean and parse JSON
-        clean_json = gemini_response.replace('```json', '').replace('```', '').strip()
+        clean_json = groq_response.replace('```json', '').replace('```', '').strip()
         event_data = json.loads(clean_json)
         
         return Event(
@@ -21,11 +38,9 @@ def parse_event(text: str) -> Event:
             start=event_data['start'],
             end=event_data['end']
         )
-    #------------------------------
-    # If parsing fails, return a default event will show
-    #------------------------------
     except Exception as e:
         print(f"Error parsing event: {e}")
+        # Fallback to dummy event
         return Event(
             title="Event",
             description="",
