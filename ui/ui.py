@@ -1,61 +1,192 @@
 import sys
-import json
-from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QVBoxLayout, QPushButton, QLabel, QLineEdit
-from PyQt5.QtGui import QFont, QIcon
-from PyQt5.QtCore import Qt
-from services.calendar import post_event
-from llm import ask_gemini
+import os
+import subprocess
 
+# Ensure parent directory is in path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Action imports
+from services.parser import parse_event
+from services.calendar import post_event as calendar_post_event
+
+# UI imports
+from PyQt5.QtWidgets import (
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout,
+    QPushButton, QLabel, QLineEdit, QMessageBox,
+    QDateTimeEdit,  QCheckBox
+)
+from PyQt5.QtCore import Qt, QDateTime
+from PyQt5.QtGui import QFont
+
+#-------------------------
+# UI CODE
+#-------------------------
 class CalendarUI(QWidget):
     def __init__(self):
         super().__init__()
+
+        # -----Check for token.pickle-----
+        if not os.path.exists('token.pickle'):
+            success = self.ensure_token()
+            if not success:
+                print("Failed to generate token")
+                sys.exit(1)
+
+        # -----Delete token flag-----
+        self.delete_token_on_exit = False
+
         self.init_ui()
 
-    def init_ui(self):
-        self.setWindowTitle('Ai Calendar Event Creator')
-        self.setGeometry(100, 100, 400, 300)
-        self.setStyleSheet("background-color: #303234;")
-        
-        layout = QVBoxLayout()
-        layout.setSpacing(10)
-        layout.setContentsMargins(15, 15, 15, 15)
-        
-        # Title
-        title = QLabel('What are you planning?')
-        title.setFont(QFont('Papyrus', 20))
-        title.setAlignment(Qt.AlignCenter)
-        title.setStyleSheet("color: yellowgreen; font-size: 20px;")
-        layout.addWidget(title)
-        layout.addStretch()
-        
-        # Event prompt
-        self.event_prompt = QLineEdit()
-        self.event_prompt.setPlaceholderText('What are you planning?')
-        self.event_prompt.setFont(QFont('Comic Sans MS', 12))
-        self.event_prompt.setStyleSheet("""
+    #-------------------------
+    # ACTION: Delete token.pickle on exit
+    #-------------------------
+    def closeEvent(self, event):
+        if self.delete_token_on_exit and os.path.exists('token.pickle'):
+            try:
+                os.remove('token.pickle')
+                print("Token deleted on exit")
+            except Exception as e:
+                print(f"Error deleting token: {e}")
+        event.accept()
+    
+    #-------------------------
+    # Global stylesheet
+    #-------------------------
+    def apply_styles(self):
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #303234;
+                color: white;
+                font-family: 'Times New Roman';
+                font-size: 16px;
+            }
+
+            QLabel#title {
+                color: yellowgreen;
+                font-size: 25px;
+            }
+
             QLineEdit {
                 padding: 8px;
                 border: 2px solid #ccc;
                 border-radius: 5px;
                 background-color: white;
+                color: black;
             }
+
             QLineEdit:focus {
                 border: 2px solid #4CAF50;
             }
-        """)
-        self.event_prompt.setMinimumHeight(40)
-        layout.addWidget(self.event_prompt)
 
-        # Send button
-        send_btn = QPushButton('Create Event')
-        send_btn.setFont(QFont('Bleeding Cowboys', 12, QFont.Bold))
-        send_btn.setStyleSheet("""
             QPushButton {
                 background-color: #4CAF50;
                 color: white;
                 padding: 10px;
-                border: none;
                 border-radius: 5px;
+                font-weight: bold;
+            }
+
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+
+            QPushButton:pressed {
+                background-color: #3d8b40;
+            }
+        """)
+    #-------------------------
+    # UI SETUP
+    #-------------------------
+    def init_ui(self):
+
+        self.apply_styles()
+        self.setWindowTitle('AI Calendar Event Creator')
+        self.setGeometry(100, 100, 400, 300)
+
+        layout = QVBoxLayout()
+
+        # -----Login deletion checkbox-----
+        delete_checkbox = QCheckBox('Logout on exit')
+        delete_checkbox.stateChanged.connect(self.toggle_delete_on_exit)
+        layout.addWidget(delete_checkbox)
+
+        # -----Title-----
+        title = QLabel('What are you planning?')
+        title.setObjectName("title")
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+
+        # -----Input textbox-----
+        self.event_prompt = QLineEdit()
+        self.event_prompt.setPlaceholderText('What are you getting up to?')
+        layout.addWidget(self.event_prompt)
+
+        # -----Create Button-----
+        btn = QPushButton('Schedule Event')
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.clicked.connect(self.handle_input) # Connect button to handler
+        layout.addWidget(btn)
+
+        self.setLayout(layout)
+
+    # -------------------------
+    # CONTROLLER LOGIC
+    # -------------------------
+    def handle_input(self):
+        text = self.event_prompt.text()
+
+        # -----Ensure input is present-----
+        if not text:
+            QMessageBox.warning(self, 'Error', 'Enter event details')
+            return
+
+        #-------------------------
+        # ACTION: Parse event
+        #-------------------------
+        event = parse_event(text)
+
+        # -----Go to preview-----
+        self.show_preview(event)
+
+    # -------------------------
+    # PREVIEW OF EVENT BEFORE PUSH
+    # -------------------------
+    def show_preview(self, event):
+        msg = QMessageBox(self)
+        msg.setWindowTitle('Preview Event')
+
+        preview_text = (
+            f"Name: {event.title}\n"
+            f"Start: {event.start}\n"
+            f"End: {event.end}\n"
+            f"Description: {event.description or '(none)'}"
+        )
+
+        msg.setText(preview_text)
+
+        # -----Messagebox styling-----
+        msg.setStyleSheet("""
+            QMessageBox {
+                background-color: #303234;
+            }
+            QMessageBox QLabel {
+                color: #ffffff;
+                text-align: center;
+            }
+        """)
+
+        yes_btn = msg.addButton('Yes', QMessageBox.YesRole)
+        no_btn = msg.addButton('No', QMessageBox.NoRole) # Closes the preview with no action
+
+        # -----Button styling-----
+        yes_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                padding: 8px 20px;
+                border-radius: 5px;
+                font-weight: bold;
+                min-width: 60px;
             }
             QPushButton:hover {
                 background-color: #45a049;
@@ -64,67 +195,67 @@ class CalendarUI(QWidget):
                 background-color: #3d8b40;
             }
         """)
-        send_btn.setMinimumHeight(45)
-        send_btn.setCursor(Qt.PointingHandCursor)
-        send_btn.clicked.connect(self.show_preview)
-        layout.addWidget(send_btn)
         
-        self.setLayout(layout)
+        no_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f44336;
+                color: white;
+                padding: 8px 20px;
+                border-radius: 5px;
+                font-weight: bold;
+                min-width: 60px;
+            }
+            QPushButton:hover {
+                background-color: #da190b;
+            }
+            QPushButton:pressed {
+                background-color: #ba0000;
+            }
+        """)
 
-    def show_preview(self):
-        user_text = self.event_prompt.text()
-        
-        if not user_text:
-            QMessageBox.warning(self, 'Error', 'Please enter what you are planning')
-            return
-        
-        prompt = f"""
-        Extract event details from this text and return ONLY a JSON object with these fields:
-        - summary (event name)
-        - start (in format YYYY-MM-DDTHH:MM:SS)
-        - end (in format YYYY-MM-DDTHH:MM:SS)
-        - description
-        
-        Text: {user_text}
-        Today's date is: 2026-04-28
-        """
-        
-        response = ask_gemini(prompt)
-        
+        msg.exec_()
+
+        # -----Links button click to push action-----
+        if msg.clickedButton() == yes_btn:
+            self.post_event(event)
+
+    # -------------------------
+    # ACTION: send event to push code
+    # -------------------------
+    def post_event(self, event):
+        # -----Call calendar service-----
+        calendar_post_event(
+            summary=event.title,
+            start_datetime=event.start,
+            end_datetime=event.end,
+            description=event.description
+        )
+
+        # -----Confirmation message-----
+        QMessageBox.information(self, 'Success', 'Event posted!')
+        self.event_prompt.clear()
+
+    # -------------------------
+    # Ensure token.pickle exists by calling generate_token.py
+    # -------------------------
+    def ensure_token(self):
         try:
-            response = response.strip().replace("```json", "").replace("```", "")
-            event = json.loads(response)
-            
-            preview_text = f"""
-Event Details:
-━━━━━━━━━━━━━━
-Name: {event['summary']}
-Start: {event['start']}
-End: {event['end']}
-Description: {event.get('description', '(none)')}
-
-Confirm to post this event?
-            """
-            
-            reply = QMessageBox.question(
-                self,
-                'Preview Event',
-                preview_text,
-                QMessageBox.Yes | QMessageBox.No
+            result = subprocess.run(
+                [sys.executable, 'generate_token.py'],
+                check=True,
+                capture_output=True
             )
-            
-            if reply == QMessageBox.Yes:
-                post_event(
-                    summary=event['summary'],
-                    start_datetime=event['start'],
-                    end_datetime=event['end'],
-                    description=event.get('description', '')
-                )
-                QMessageBox.information(self, 'Success', 'Event posted to calendar!')
-                self.event_prompt.setText('')
-                
-        except Exception as e:
-            QMessageBox.warning(self, 'Error', f'Could not parse event: {str(e)}')
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"Error: {e}")
+            return False
+        
+    #-------------------------
+    # Delete token handler
+    #-------------------------
+    def toggle_delete_on_exit(self, state):
+        self.delete_token_on_exit = state == 2  # 2 = checked, 0 = unchecked
+        print(f"Delete on exit: {self.delete_token_on_exit}")
 
 
 if __name__ == '__main__':
