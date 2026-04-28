@@ -1,8 +1,10 @@
 import sys
+import json
 from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QVBoxLayout, QPushButton, QLabel, QLineEdit
-from PyQt5.QtGui import QFont, QColor, QIcon
+from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtCore import Qt
 from services.calendar import post_event
+from llm import ask_gemini
 
 class CalendarUI(QWidget):
     def __init__(self):
@@ -10,7 +12,6 @@ class CalendarUI(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        # Window properties and layout
         self.setWindowTitle('Ai Calendar Event Creator')
         self.setGeometry(100, 100, 400, 300)
         self.setStyleSheet("background-color: #303234;")
@@ -25,7 +26,7 @@ class CalendarUI(QWidget):
         title.setAlignment(Qt.AlignCenter)
         title.setStyleSheet("color: yellowgreen; font-size: 20px;")
         layout.addWidget(title)
-        layout.addStretch() #keeps title at top
+        layout.addStretch()
         
         # Event prompt
         self.event_prompt = QLineEdit()
@@ -42,7 +43,7 @@ class CalendarUI(QWidget):
                 border: 2px solid #4CAF50;
             }
         """)
-        self.event_prompt.setMinimumHeight(40)  # Height
+        self.event_prompt.setMinimumHeight(40)
         layout.addWidget(self.event_prompt)
 
         # Send button
@@ -64,59 +65,67 @@ class CalendarUI(QWidget):
             }
         """)
         send_btn.setMinimumHeight(45)
-        send_btn.setCursor(Qt.PointingHandCursor)  # Hand cursor on hover
+        send_btn.setCursor(Qt.PointingHandCursor)
         send_btn.clicked.connect(self.show_preview)
         layout.addWidget(send_btn)
         
         self.setLayout(layout)
 
     def show_preview(self):
-        """Show preview dialog before posting"""
-        name = self.event_name.text()
-        start = self.start_time.dateTime().toString('yyyy-MM-dd HH:mm:ss')
-        end = self.end_time.dateTime().toString('yyyy-MM-dd HH:mm:ss')
-        description = self.description.text()
+        user_text = self.event_prompt.text()
         
-        if not name:
-            QMessageBox.warning(self, 'Error', 'Please enter an event name')
+        if not user_text:
+            QMessageBox.warning(self, 'Error', 'Please enter what you are planning')
             return
         
-        preview_text = f"""
-    Event Details:
-    ━━━━━━━━━━━━━━
-    Name: {name}
-    Start: {start}
-    End: {end}
-    Description: {description if description else '(none)'}
-
-    Confirm to post this event?
+        prompt = f"""
+        Extract event details from this text and return ONLY a JSON object with these fields:
+        - summary (event name)
+        - start (in format YYYY-MM-DDTHH:MM:SS)
+        - end (in format YYYY-MM-DDTHH:MM:SS)
+        - description
+        
+        Text: {user_text}
+        Today's date is: 2026-04-28
         """
         
-        reply = QMessageBox.question(
-            self, 
-            'Preview Event', 
-            preview_text,
-            QMessageBox.Yes | QMessageBox.No
-        )
+        response = ask_gemini(prompt)
         
-        if reply == QMessageBox.Yes:
-            self.post_event()
+        try:
+            response = response.strip().replace("```json", "").replace("```", "")
+            event = json.loads(response)
+            
+            preview_text = f"""
+Event Details:
+━━━━━━━━━━━━━━
+Name: {event['summary']}
+Start: {event['start']}
+End: {event['end']}
+Description: {event.get('description', '(none)')}
 
-    def post_event(self):
-        """Actually post the event"""
-        start = self.start_time.dateTime().toString('yyyy-MM-ddThh:mm:ss')
-        end = self.end_time.dateTime().toString('yyyy-MM-ddThh:mm:ss')
-        
-        post_event(  # 👈 Pass description here
-            summary=self.event_name.text(),
-            start_datetime=start,
-            end_datetime=end,
-            description=self.description.text()
-        )
-        
-        QMessageBox.information(self, 'Success', 'Event posted to calendar!')
-        self.event_name.setText('')
-        self.description.setText('')
+Confirm to post this event?
+            """
+            
+            reply = QMessageBox.question(
+                self,
+                'Preview Event',
+                preview_text,
+                QMessageBox.Yes | QMessageBox.No
+            )
+            
+            if reply == QMessageBox.Yes:
+                post_event(
+                    summary=event['summary'],
+                    start_datetime=event['start'],
+                    end_datetime=event['end'],
+                    description=event.get('description', '')
+                )
+                QMessageBox.information(self, 'Success', 'Event posted to calendar!')
+                self.event_prompt.setText('')
+                
+        except Exception as e:
+            QMessageBox.warning(self, 'Error', f'Could not parse event: {str(e)}')
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
