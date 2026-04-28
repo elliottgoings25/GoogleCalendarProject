@@ -1,21 +1,32 @@
+from datetime import datetime, timedelta
 import json
 import sys
 import os
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from models.event import Event
-from llm import ask_gemini 
+from agent import ask_gemini
 
-#-----------------------------
-# Parser function that uses Groq to extract event details from text
-#-----------------------------
+#------------------------------------
+# Parses user input to extract event details using the LLM
+#------------------------------------
 def parse_event(text: str) -> Event:
     try:
-        prompt = f"""Extract event details from this text. Return ONLY valid JSON with no markdown formatting.
+        # Get today's date for reference
+        today = datetime.now()
+        tomorrow = today + timedelta(days=1)
+        next_week = today + timedelta(days=7)
+        
+        prompt = f"""Extract event details from this text. Handle relative dates like "next Thursday", "tomorrow", "a week from now", etc.
+
+Today is: {today.strftime('%A, %B %d, %Y')}
+Tomorrow: {tomorrow.strftime('%Y-%m-%d')}
+A week from now: {next_week.strftime('%Y-%m-%d')}
 
 Text: {text}
 
-Return this exact JSON structure:
+Return this exact JSON structure (use ISO 8601 format):
 {{
     "title": "event title",
     "description": "event description",
@@ -23,9 +34,13 @@ Return this exact JSON structure:
     "end": "2026-04-20T11:00:00"
 }}
 
-If something is unspecified, kill the prompt."""
+Rules:
+- If time isn't specified, assume 10:00 AM - 11:00 AM
+- If only a date is given (no time), assume 10:00 AM start
+- Handle phrases like: "next Thursday", "tomorrow", "a week later", "in 2 days", "next Monday", etc.
+- Always return times in ISO 8601 format (YYYY-MM-DDTHH:MM:SS)
+- If no description, use empty string"""
         
-        # Call your existing Groq function
         groq_response = ask_gemini(prompt)
         
         # Clean and parse JSON
@@ -40,7 +55,6 @@ If something is unspecified, kill the prompt."""
         )
     except Exception as e:
         print(f"Error parsing event: {e}")
-        # Fallback to dummy event
         return Event(
             title="Event",
             description="",
