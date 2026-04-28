@@ -23,6 +23,7 @@ Return this exact JSON structure:
     "end": "2026-04-20T11:00:00"
 }}
 
+If i say next week, assume that means the earlies it could possibly be is the nearest sunday, but use the day of the week specified
 If something is unspecified, kill the prompt."""
         
         # Call your existing Groq function
