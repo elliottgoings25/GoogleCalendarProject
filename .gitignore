@@ -17,3 +17,6 @@ token.pickle
 
 #else
 service-account.json
+
+#API keys
+config.py
