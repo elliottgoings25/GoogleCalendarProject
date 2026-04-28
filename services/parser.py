@@ -6,7 +6,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from models.event import Event
-from agent import ask_gemini
+from llm import ask_gemini
 
 #------------------------------------
 # Parses user input to extract event details using the LLM
