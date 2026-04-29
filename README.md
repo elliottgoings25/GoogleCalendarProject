@@ -29,4 +29,4 @@ From there, as long as you have the credentials file and previous commands ran, 
 
 
 also here is a .exe build command if you want it
-    `pyinstaller --onefile --windowed --icon=CPSC311.ico main.py`
+    `pyinstaller --onefile --windowed --icon=CPSC311.ico --add-data ".env;." main.py`

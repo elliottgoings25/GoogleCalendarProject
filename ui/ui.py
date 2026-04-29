@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 # Action imports
 from services.parser import parse_event
 from services.calendar import post_event as calendar_post_event
+from generate_token import generate_token
 
 # UI imports
 from PyQt5.QtWidgets import (
@@ -29,8 +30,7 @@ class CalendarUI(QWidget):
         if not os.path.exists('token.pickle'):
             success = self.ensure_token()
             if not success:
-                print("Failed to generate token")
-                sys.exit(1)
+                QMessageBox.critical(self, "Error", "Failed to authenticate. App will still open.")
 
         # -----Delete token flag-----
         self.delete_token_on_exit = False
@@ -240,13 +240,8 @@ class CalendarUI(QWidget):
     # -------------------------
     def ensure_token(self):
         try:
-            result = subprocess.run(
-                [sys.executable, 'generate_token.py'],
-                check=True,
-                capture_output=True
-            )
-            return True
-        except subprocess.CalledProcessError as e:
+            return generate_token()
+        except Exception as e:
             print(f"Error: {e}")
             return False
         
@@ -259,6 +254,10 @@ class CalendarUI(QWidget):
 
 
 if __name__ == '__main__':
+    # Handle multiprocessing for PyInstaller
+    import multiprocessing
+    multiprocessing.freeze_support()
+
     app = QApplication(sys.argv)
     window = CalendarUI()
     window.show()
