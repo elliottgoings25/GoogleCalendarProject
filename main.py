@@ -23,17 +23,9 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
 
     try:
-        print("Starting app...")
-
         app = QApplication(sys.argv)
-
-        print("Creating window...")
         window = CalendarUI()
-
-        print("Showing window...")
         window.show()
-
-        print("Entering event loop...")
         sys.exit(app.exec_())
 
     except Exception as e:
