@@ -4,7 +4,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from models.event import Event
-from llm import ask_gemini 
+from llm import ask_llm
 
 #-----------------------------
 # Parser function that uses Groq to extract event details from text
@@ -27,7 +27,7 @@ If i say next week, assume that means the earlies it could possibly be is the ne
 If something is unspecified, kill the prompt."""
         
         # Call your existing Groq function
-        groq_response = ask_gemini(prompt)
+        groq_response = ask_llm(prompt)
         
         # Clean and parse JSON
         clean_json = groq_response.replace('```json', '').replace('```', '').strip()
